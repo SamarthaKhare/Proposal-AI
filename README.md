@@ -30,3 +30,10 @@ pnpm lint
 pnpm test
 pnpm build
 ```
+
+If the dev server is running, stop it before running `pnpm build` or Playwright. Next.js writes generated chunks into `.next`, and concurrent Next processes in the same checkout can leave stale chunks behind. If that happens, stop the server and reset the generated cache:
+
+```bash
+rm -rf .next
+pnpm dev
+```
