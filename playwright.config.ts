@@ -4,7 +4,7 @@ export default defineConfig({
   testDir: "./tests/e2e",
   fullyParallel: true,
   use: {
-    baseURL: "http://127.0.0.1:3107",
+    baseURL: "http://127.0.0.1:3108",
     trace: "on-first-retry"
   },
   projects: [
@@ -18,8 +18,8 @@ export default defineConfig({
     }
   ],
   webServer: {
-    command: "pnpm exec next dev --hostname 127.0.0.1 --port 3107",
-    url: "http://127.0.0.1:3107",
+    command: "pnpm exec next dev --hostname 127.0.0.1 --port 3108",
+    url: "http://127.0.0.1:3108",
     reuseExistingServer: false,
     timeout: 120000
   }

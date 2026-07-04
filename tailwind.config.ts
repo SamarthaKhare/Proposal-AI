@@ -24,7 +24,7 @@ const config: Config = {
         sans: ["Inter", "Arial", "sans-serif"]
       },
       boxShadow: {
-        panel: "0 1px 2px rgb(16 24 40 / 0.08)"
+        panel: "0 1px 2px rgb(15 23 42 / 0.06), 0 8px 24px rgb(15 23 42 / 0.04)"
       }
     }
   },
