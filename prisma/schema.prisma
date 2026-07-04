@@ -1,0 +1,190 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  ADMIN
+  SALESPERSON
+  VIEWER
+}
+
+enum CaptureStatus {
+  UPLOADED
+  EXTRACTING
+  NEEDS_REVIEW
+  APPROVED
+  FAILED
+}
+
+enum ProposalStatus {
+  DRAFT
+  REVIEWED
+  SENT
+  ARCHIVED
+}
+
+enum AssetKind {
+  FORM_IMAGE
+  TEMPLATE_DOCX
+  PROPOSAL_PDF
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String
+  role      UserRole @default(SALESPERSON)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  captures  CaptureSession[]
+  proposals Proposal[]
+}
+
+model Customer {
+  id            String   @id @default(cuid())
+  companyName   String
+  contactName   String?
+  contactEmail  String?
+  phone         String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  proposals Proposal[]
+}
+
+model ProposalTemplate {
+  id             String   @id @default(cuid())
+  name           String
+  description    String?
+  docxAssetId     String?
+  placeholderMap Json
+  editorTemplate  Json
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  proposals Proposal[]
+}
+
+model CaptureSession {
+  id              String        @id @default(cuid())
+  salespersonId   String
+  status          CaptureStatus @default(UPLOADED)
+  formVersion     String
+  rawOcrText      String?
+  extractedFields Json?
+  reviewNotes     String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  salesperson User            @relation(fields: [salespersonId], references: [id])
+  assets      UploadedAsset[]
+  proposal    Proposal?
+}
+
+model UploadedAsset {
+  id              String    @id @default(cuid())
+  captureSessionId String?
+  kind            AssetKind
+  fileName        String
+  contentType     String
+  storageKey      String
+  sizeBytes       Int
+  createdAt       DateTime  @default(now())
+
+  captureSession CaptureSession? @relation(fields: [captureSessionId], references: [id])
+}
+
+model Proposal {
+  id              String         @id @default(cuid())
+  templateId      String
+  customerId      String?
+  captureSessionId String?       @unique
+  salespersonId   String
+  status          ProposalStatus @default(DRAFT)
+  title           String
+  structuredData  Json
+  editorJson      Json
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  template       ProposalTemplate @relation(fields: [templateId], references: [id])
+  customer       Customer?        @relation(fields: [customerId], references: [id])
+  captureSession CaptureSession?  @relation(fields: [captureSessionId], references: [id])
+  salesperson    User             @relation(fields: [salespersonId], references: [id])
+  versions       ProposalVersion[]
+  patches        ProposalPatch[]
+  assets         GeneratedAsset[]
+  emailDrafts    EmailDraft[]
+  emailSends     EmailSend[]
+}
+
+model ProposalVersion {
+  id          String   @id @default(cuid())
+  proposalId  String
+  label       String
+  editorJson  Json
+  createdBy   String
+  createdAt   DateTime @default(now())
+
+  proposal Proposal @relation(fields: [proposalId], references: [id])
+}
+
+model ProposalPatch {
+  id             String   @id @default(cuid())
+  proposalId     String
+  instruction    String
+  summary        String
+  operations     Json
+  applied        Boolean  @default(false)
+  validationNotes Json?
+  createdAt      DateTime @default(now())
+  appliedAt      DateTime?
+
+  proposal Proposal @relation(fields: [proposalId], references: [id])
+}
+
+model GeneratedAsset {
+  id          String    @id @default(cuid())
+  proposalId  String
+  kind        AssetKind
+  fileName    String
+  storageKey  String
+  contentType String
+  sizeBytes   Int
+  createdAt   DateTime  @default(now())
+
+  proposal Proposal @relation(fields: [proposalId], references: [id])
+}
+
+model EmailDraft {
+  id          String   @id @default(cuid())
+  proposalId  String
+  toEmail     String?
+  subject     String
+  body        String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  proposal Proposal @relation(fields: [proposalId], references: [id])
+}
+
+model EmailSend {
+  id                String   @id @default(cuid())
+  proposalId         String
+  toEmail            String
+  subject            String
+  providerMessageId  String?
+  status             String
+  errorMessage       String?
+  sentAt             DateTime?
+  createdAt          DateTime @default(now())
+
+  proposal Proposal @relation(fields: [proposalId], references: [id])
+}
