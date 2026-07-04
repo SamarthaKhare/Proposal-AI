@@ -1,0 +1,21 @@
+services:
+  postgres:
+    image: postgres:17
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: proposal_ai
+    ports:
+      - "5432:5432"
+    volumes:
+      - proposal_ai_postgres:/var/lib/postgresql/data
+
+  gotenberg:
+    image: gotenberg/gotenberg:8
+    restart: unless-stopped
+    ports:
+      - "3001:3000"
+
+volumes:
+  proposal_ai_postgres:
