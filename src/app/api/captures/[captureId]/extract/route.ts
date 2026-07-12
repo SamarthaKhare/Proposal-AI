@@ -14,6 +14,17 @@ export async function POST(request: NextRequest, context: { params: Promise<{ ca
 
   const buffer = Buffer.from(await file.arrayBuffer());
   const ocr = await extractTextFromImage(buffer);
+  if (!ocr.text.trim()) {
+    return NextResponse.json(
+      {
+        error: ocr.warnings[0] || "OCR did not return any text from the uploaded image.",
+        captureId,
+        ocr
+      },
+      { status: 503 }
+    );
+  }
+
   const intake = await extractIntakeWithAi(ocr.text);
 
   const capture = store.captures.get(captureId);

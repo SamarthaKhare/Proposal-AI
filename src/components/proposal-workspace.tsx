@@ -78,6 +78,7 @@ export function ProposalWorkspace() {
     () => proposal?.sections.find((section) => section.id === selectedSectionId) || proposal?.sections[0],
     [proposal, selectedSectionId]
   );
+  const statusIsIssue = /failed|error|required|subscription|cannot|not/i.test(status);
 
   async function extractFields() {
     if (!file) {
@@ -97,6 +98,9 @@ export function ProposalWorkspace() {
         body: upload
       });
       const capture = await captureResponse.json();
+      if (!captureResponse.ok) {
+        throw new Error(capture.error || "Capture upload failed.");
+      }
       setCaptureId(capture.id);
 
       setStatus("Extracting fields");
@@ -107,9 +111,15 @@ export function ProposalWorkspace() {
         body: extraction
       });
       const data = await extractResponse.json();
+      if (!extractResponse.ok) {
+        setStatus(data.error || data.ocr?.warnings?.[0] || "Field extraction failed.");
+        return;
+      }
       setIntake(data.intake);
       setStatus(data.ocr?.warnings?.[0] || "Fields extracted");
       setStep("review");
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : "Field extraction failed.");
     } finally {
       setBusy(false);
     }
@@ -261,42 +271,35 @@ export function ProposalWorkspace() {
   }
 
   return (
-    <main className="min-h-screen">
-      <header className="border-b border-border bg-white/85 backdrop-blur">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6">
+    <main className="min-h-screen bg-background text-foreground">
+      <header className="sticky top-0 z-20 border-b border-border/80 bg-background/90 backdrop-blur-xl">
+        <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-3 sm:px-6">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-md bg-teal-700 text-white">
-              <FileText className="h-5 w-5" />
+            <div className="flex h-9 w-9 items-center justify-center rounded-md bg-slate-950 text-white shadow-sm">
+              <FileText className="h-4 w-4" />
             </div>
             <div>
-              <h1 className="text-base font-semibold">Proposal AI</h1>
-              <p className="text-xs text-slate-500">{status}</p>
+              <h1 className="text-sm font-semibold tracking-tight sm:text-base">Proposal AI</h1>
+              <p className="hidden text-xs text-slate-500 sm:block">Sales intake to client-ready proposal</p>
             </div>
           </div>
-          <div className="hidden items-center gap-2 md:flex">
-            {steps.map((item) => {
-              const Icon = item.icon;
-              return (
-                <button
-                  key={item.id}
-                  onClick={() => setStep(item.id)}
-                  className={cn(
-                    "inline-flex h-9 items-center gap-2 rounded-md border px-3 text-sm transition",
-                    step === item.id ? "border-teal-700 bg-teal-50 text-teal-900" : "border-border bg-white text-slate-600 hover:bg-slate-50"
-                  )}
-                >
-                  <Icon className="h-4 w-4" />
-                  {item.label}
-                </button>
-              );
-            })}
+          <div
+            className={cn(
+              "max-w-[58vw] truncate rounded-full border px-3 py-1 text-xs font-medium sm:max-w-[520px]",
+              statusIsIssue ? "border-red-200 bg-red-50 text-red-700" : "border-emerald-200 bg-emerald-50 text-emerald-800"
+            )}
+            role="status"
+            aria-live="polite"
+            title={status}
+          >
+            {status}
           </div>
         </div>
       </header>
 
-      <div className="mx-auto grid max-w-7xl gap-4 px-4 py-4 sm:px-6 lg:grid-cols-[280px_minmax(0,1fr)]">
-        <aside className="rounded-md border border-border bg-white p-3 shadow-panel">
-          <div className="grid grid-cols-2 gap-2 lg:grid-cols-1">
+      <div className="mx-auto grid max-w-7xl gap-5 px-4 py-5 sm:px-6 lg:grid-cols-[260px_minmax(0,1fr)]">
+        <aside className="space-y-4">
+          <div className="rounded-md border border-border/80 bg-white p-2 shadow-panel">
             {steps.map((item, index) => {
               const Icon = item.icon;
               return (
@@ -304,39 +307,50 @@ export function ProposalWorkspace() {
                   key={item.id}
                   onClick={() => setStep(item.id)}
                   className={cn(
-                    "flex items-center gap-3 rounded-md border p-3 text-left text-sm transition",
-                    step === item.id ? "border-teal-700 bg-teal-50" : "border-border bg-white hover:bg-slate-50"
+                    "flex w-full items-center gap-3 rounded-md px-3 py-2.5 text-left text-sm transition",
+                    step === item.id ? "bg-slate-950 text-white shadow-sm" : "text-slate-600 hover:bg-slate-100 hover:text-slate-950"
                   )}
                 >
-                  <span className="flex h-8 w-8 items-center justify-center rounded-md bg-slate-100 text-slate-700">
+                  <span
+                    className={cn(
+                      "flex h-8 w-8 items-center justify-center rounded-md",
+                      step === item.id ? "bg-white/15 text-white" : "bg-slate-100 text-slate-500"
+                    )}
+                  >
                     <Icon className="h-4 w-4" />
                   </span>
-                  <span>
+                  <span className="min-w-0">
                     <span className="block font-medium">{item.label}</span>
-                    <span className="text-xs text-slate-500">Step {index + 1}</span>
+                    <span className={cn("text-xs", step === item.id ? "text-white/65" : "text-slate-400")}>Step {index + 1}</span>
                   </span>
                 </button>
               );
             })}
           </div>
 
-          <div className="mt-4 rounded-md border border-border bg-slate-50 p-3">
-            <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">Template</div>
-            <div className="text-sm font-medium">{templateName}</div>
-            <input
-              type="file"
-              accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-              onChange={(event) => {
-                const selected = event.target.files?.[0];
-                if (selected) {
-                  void importTemplate(selected);
-                }
-              }}
-              className="mt-3 w-full text-xs"
-            />
-            <div className="mt-2 flex flex-wrap gap-1 text-xs text-slate-500">
+          <div className="rounded-md border border-border/80 bg-white p-4 shadow-panel">
+            <div className="mb-2 text-xs font-medium text-slate-500">Template</div>
+            <div className="text-sm font-semibold text-slate-950">{templateName}</div>
+            <div className="mt-3 flex items-center gap-3">
+              <label className="inline-flex h-8 shrink-0 cursor-pointer items-center justify-center whitespace-nowrap rounded-md bg-slate-100 px-3 text-xs font-medium text-slate-700 transition hover:bg-slate-200">
+                <input
+                  type="file"
+                  accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                  onChange={(event) => {
+                    const selected = event.target.files?.[0];
+                    if (selected) {
+                      void importTemplate(selected);
+                    }
+                  }}
+                  className="sr-only"
+                />
+                Choose file
+              </label>
+              <span className="min-w-0 truncate text-xs text-slate-500">Optional DOCX template</span>
+            </div>
+            <div className="mt-3 flex flex-wrap gap-1.5 text-xs text-slate-500">
               {templatePlaceholders.slice(0, 5).map((placeholder) => (
-                <span key={placeholder} className="rounded bg-white px-2 py-1">
+                <span key={placeholder} className="rounded-md bg-slate-100 px-2 py-1">
                   {placeholder}
                 </span>
               ))}
@@ -348,25 +362,40 @@ export function ProposalWorkspace() {
           {step === "capture" && (
             <Panel title="Capture" icon={FileImage}>
               <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_340px]">
-                <div className="rounded-md border border-dashed border-slate-300 bg-white p-5">
+                <div className="rounded-md border border-dashed border-slate-300 bg-slate-50/70 p-5">
                   <Label>Form image</Label>
-                  <div className="flex min-h-48 flex-col items-center justify-center rounded-md border border-border bg-slate-50 p-4 text-center">
-                    <Upload className="mb-3 h-8 w-8 text-teal-700" />
-                    <input
-                      type="file"
-                      accept="image/*"
-                      capture="environment"
-                      onChange={(event) => setFile(event.target.files?.[0] || null)}
-                      className="max-w-full text-sm"
-                    />
-                    <div className="mt-3 text-sm font-medium">{file?.name || "Sample intake available"}</div>
+                  <div className="flex min-h-56 flex-col items-center justify-center rounded-md border border-border bg-white p-5 text-center">
+                    <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-md bg-emerald-50 text-primary">
+                      <Upload className="h-6 w-6" />
+                    </div>
+                    <label className="inline-flex h-10 cursor-pointer items-center justify-center rounded-md bg-slate-950 px-4 text-sm font-medium text-white shadow-sm transition hover:bg-slate-800">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        capture="environment"
+                        onChange={(event) => setFile(event.target.files?.[0] || null)}
+                        className="sr-only"
+                      />
+                      Choose image
+                    </label>
+                    <div className="mt-4 max-w-full truncate text-sm font-medium text-slate-900">
+                      {file?.name || "Sample intake available"}
+                    </div>
                   </div>
                   <div className="mt-4 flex flex-wrap gap-2">
                     <Button onClick={extractFields} disabled={busy}>
                       <RefreshCcw className="h-4 w-4" />
                       Extract fields
                     </Button>
-                    <Button variant="secondary" onClick={() => setIntake(sampleIntake)} disabled={busy}>
+                    <Button
+                      variant="secondary"
+                      onClick={() => {
+                        setIntake(sampleIntake);
+                        setStatus("Sample intake loaded");
+                        setStep("review");
+                      }}
+                      disabled={busy}
+                    >
                       <Sparkles className="h-4 w-4" />
                       Load sample
                     </Button>
@@ -374,7 +403,10 @@ export function ProposalWorkspace() {
                 </div>
 
                 <div className="scan-lines rounded-md border border-border bg-white p-4 shadow-panel">
-                  <div className="mb-4 h-8 w-32 rounded bg-teal-700" />
+                  <div className="mb-4 flex items-center justify-between">
+                    <div className="h-2 w-20 rounded-full bg-primary" />
+                    <div className="text-xs font-medium text-slate-400">Preview</div>
+                  </div>
                   <div className="space-y-3 text-xs text-slate-500">
                     <ScanField label="Customer Name" value={intake.customerName} />
                     <ScanField label="Product" value={intake.products[0]?.productName || ""} />
@@ -389,7 +421,7 @@ export function ProposalWorkspace() {
 
           {step === "review" && (
             <Panel title="Review Fields" icon={Check}>
-              <div className="grid gap-4 lg:grid-cols-2">
+              <div className="grid gap-x-4 gap-y-5 lg:grid-cols-2">
                 <FieldGroup label="Customer Name">
                   <Input value={intake.customerName} onChange={(event) => setIntake({ ...intake, customerName: event.target.value })} />
                 </FieldGroup>
@@ -451,7 +483,7 @@ export function ProposalWorkspace() {
                   />
                 </FieldGroup>
               </div>
-              <div className="mt-4">
+              <div className="mt-6 flex justify-end">
                 <Button onClick={generateProposal} disabled={busy}>
                   <FileText className="h-4 w-4" />
                   Generate proposal
@@ -472,21 +504,23 @@ export function ProposalWorkspace() {
                         key={section.id}
                         onClick={() => setSelectedSectionId(section.id)}
                         className={cn(
-                          "w-full rounded-md border p-3 text-left text-sm transition",
-                          selectedSectionId === section.id ? "border-teal-700 bg-teal-50" : "border-border bg-white hover:bg-slate-50"
+                          "w-full rounded-md px-3 py-2.5 text-left text-sm transition",
+                          selectedSectionId === section.id ? "bg-slate-950 text-white shadow-sm" : "text-slate-600 hover:bg-slate-100 hover:text-slate-950"
                         )}
                       >
                         <span className="block font-medium">{section.title}</span>
-                        <span className="text-xs text-slate-500">{section.locked ? "Locked" : `Section ${section.id}`}</span>
+                        <span className={cn("text-xs", selectedSectionId === section.id ? "text-white/65" : "text-slate-400")}>
+                          {section.locked ? "Locked" : `Section ${section.id}`}
+                        </span>
                       </button>
                     ))}
                   </div>
 
                   <div className="min-w-0">
-                    <div className="mb-3 flex items-center justify-between gap-2">
+                    <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                       <div>
-                        <h2 className="text-lg font-semibold">{selectedSection?.title}</h2>
-                        <p className="text-xs text-slate-500">Version {proposal.version}</p>
+                        <h2 className="text-xl font-semibold tracking-tight">{selectedSection?.title}</h2>
+                        <p className="mt-1 text-xs text-slate-500">Version {proposal.version}</p>
                       </div>
                       <div className="flex gap-2">
                         <Button
@@ -511,9 +545,11 @@ export function ProposalWorkspace() {
                     )}
                   </div>
 
-                  <div className="rounded-md border border-border bg-white p-3 shadow-panel">
+                  <div className="self-start rounded-md border border-border bg-slate-50/70 p-4 shadow-panel">
                     <div className="mb-3 flex items-center gap-2">
-                      <Bot className="h-4 w-4 text-teal-700" />
+                      <span className="flex h-8 w-8 items-center justify-center rounded-md bg-white text-primary shadow-sm">
+                        <Bot className="h-4 w-4" />
+                      </span>
                       <h3 className="text-sm font-semibold">AI Edit</h3>
                     </div>
                     <Textarea
@@ -529,7 +565,7 @@ export function ProposalWorkspace() {
                     </div>
 
                     {pendingPatch && (
-                      <div className="mt-4 space-y-3 rounded-md border border-border bg-slate-50 p-3">
+                      <div className="mt-4 space-y-3 rounded-md border border-border bg-white p-3">
                         <div className="text-sm font-medium">{pendingPatch.patch.summary}</div>
                         {pendingPatch.validation.errors.length > 0 && (
                           <div className="rounded-md bg-red-50 p-2 text-xs text-red-700">
@@ -543,7 +579,7 @@ export function ProposalWorkspace() {
                         )}
                         <div className="space-y-2">
                           {pendingPatch.patch.operations.map((operation, index) => (
-                            <pre key={index} className="overflow-auto rounded bg-white p-2 text-xs text-slate-700">
+                            <pre key={index} className="overflow-auto rounded-md bg-slate-50 p-2 text-xs text-slate-700">
                               {JSON.stringify(operation, null, 2)}
                             </pre>
                           ))}
@@ -584,7 +620,7 @@ export function ProposalWorkspace() {
                         onChange={(event) => setEmail({ ...email, body: event.target.value })}
                       />
                     </FieldGroup>
-                    <div className="flex flex-wrap gap-2">
+                    <div className="flex flex-wrap justify-end gap-2">
                       <Button variant="secondary" onClick={draftEmail} disabled={busy}>
                         <RefreshCcw className="h-4 w-4" />
                         Draft body
@@ -595,11 +631,13 @@ export function ProposalWorkspace() {
                       </Button>
                     </div>
                   </div>
-                  <div className="rounded-md border border-border bg-white p-4 shadow-panel">
+                  <div className="self-start rounded-md border border-border bg-slate-50/70 p-4 shadow-panel">
                     <div className="mb-3 text-sm font-semibold">Attachment</div>
-                    <div className="rounded-md border border-border bg-slate-50 p-3">
+                    <div className="rounded-md border border-border bg-white p-3">
                       <div className="flex items-center gap-3">
-                        <FileText className="h-8 w-8 text-teal-700" />
+                        <div className="flex h-10 w-10 items-center justify-center rounded-md bg-emerald-50 text-primary">
+                          <FileText className="h-5 w-5" />
+                        </div>
                         <div>
                           <div className="text-sm font-medium">{proposal.title}.pdf</div>
                           <div className="text-xs text-slate-500">Generated at send time</div>
@@ -627,10 +665,12 @@ function Panel({
   children: ReactNode;
 }) {
   return (
-    <div className="rounded-md border border-border bg-white p-4 shadow-panel">
-      <div className="mb-4 flex items-center gap-2 border-b border-border pb-3">
-        <Icon className="h-5 w-5 text-teal-700" />
-        <h2 className="text-base font-semibold">{title}</h2>
+    <div className="rounded-md border border-border/80 bg-white p-5 shadow-panel">
+      <div className="mb-5 flex items-center gap-3">
+        <span className="flex h-9 w-9 items-center justify-center rounded-md bg-slate-100 text-slate-600">
+          <Icon className="h-4 w-4" />
+        </span>
+        <h2 className="text-lg font-semibold tracking-tight">{title}</h2>
       </div>
       {children}
     </div>
@@ -639,7 +679,7 @@ function Panel({
 
 function FieldGroup({ label, children }: { label: string; children: ReactNode }) {
   return (
-    <div>
+    <div className="min-w-0">
       <Label>{label}</Label>
       {children}
     </div>
@@ -649,15 +689,15 @@ function FieldGroup({ label, children }: { label: string; children: ReactNode })
 function ScanField({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <div className="mb-1 font-semibold text-slate-600">{label}</div>
-      <div className="rounded border border-slate-200 bg-white/90 px-2 py-1 text-slate-700">{value}</div>
+      <div className="mb-1 font-medium text-slate-500">{label}</div>
+      <div className="min-h-8 rounded-md border border-slate-200 bg-white px-2 py-1.5 text-slate-800">{value}</div>
     </div>
   );
 }
 
 function EmptyState({ message }: { message: string }) {
   return (
-    <div className="flex min-h-48 items-center justify-center rounded-md border border-dashed border-slate-300 bg-slate-50 text-sm text-slate-500">
+    <div className="flex min-h-48 items-center justify-center rounded-md border border-dashed border-slate-300 bg-slate-50/70 text-sm text-slate-500">
       {message}
     </div>
   );

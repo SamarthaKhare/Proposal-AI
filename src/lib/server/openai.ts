@@ -97,7 +97,7 @@ const patchJsonSchema = {
               additionalProperties: false,
               required: ["type", "sectionId", "newContent"],
               properties: {
-                type: { const: "rewrite_section" },
+                type: { type: "string", const: "rewrite_section" },
                 sectionId: { type: "string" },
                 newContent: { type: "string" }
               }
@@ -107,7 +107,7 @@ const patchJsonSchema = {
               additionalProperties: false,
               required: ["type", "afterSectionId", "title", "content"],
               properties: {
-                type: { const: "insert_section_after" },
+                type: { type: "string", const: "insert_section_after" },
                 afterSectionId: { type: "string" },
                 title: { type: "string" },
                 content: { type: "string" }
@@ -118,7 +118,7 @@ const patchJsonSchema = {
               additionalProperties: false,
               required: ["type", "field", "value"],
               properties: {
-                type: { const: "update_field" },
+                type: { type: "string", const: "update_field" },
                 field: {
                   type: "string",
                   enum: [
@@ -136,8 +136,8 @@ const patchJsonSchema = {
               additionalProperties: false,
               required: ["type", "sectionId", "rowId", "column", "value"],
               properties: {
-                type: { const: "update_table_cell" },
-                sectionId: { const: "pricing" },
+                type: { type: "string", const: "update_table_cell" },
+                sectionId: { type: "string", const: "pricing" },
                 rowId: { type: "string" },
                 column: {
                   type: "string",
@@ -151,7 +151,7 @@ const patchJsonSchema = {
               additionalProperties: false,
               required: ["type", "title", "dateOrDuration", "notes"],
               properties: {
-                type: { const: "add_timeline_milestone" },
+                type: { type: "string", const: "add_timeline_milestone" },
                 title: { type: "string" },
                 dateOrDuration: { type: "string" },
                 notes: { type: "string" }

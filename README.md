@@ -21,7 +21,7 @@ cp .env.example .env.local
 pnpm dev
 ```
 
-The UI includes a local demo path so the core workflow can run without external credentials. Real OCR, AI, PDF rendering, and email sending require the environment variables in `.env.example`.
+The UI includes a local demo path so the core workflow can run without external credentials. Real OCR through Amazon Textract, AI, PDF rendering, and email sending through Resend require the environment variables in `.env.example`.
 
 ## Verification
 

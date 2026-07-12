@@ -69,7 +69,7 @@ export function SectionEditor({
     content: markdownishToHtml(content),
     editorProps: {
       attributes: {
-        class: "tiptap rounded-md border border-border bg-white p-4 text-sm shadow-panel"
+        class: "tiptap rounded-md border border-border bg-white p-5 text-sm leading-6 shadow-panel"
       }
     },
     onUpdate({ editor: currentEditor }) {

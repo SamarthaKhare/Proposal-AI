@@ -3,6 +3,38 @@ import { sampleIntake } from "@/lib/forms/default-form";
 import { buildProposalFromIntake } from "@/lib/proposal/build-proposal";
 import { applyPatch, validatePatch } from "@/lib/proposal/patch";
 import { renderProposalHtml } from "@/lib/proposal/render-html";
+import { extractTextFromImage } from "@/lib/server/ocr";
+
+const awsCredentialEnvKeys = [
+  "AWS_ACCESS_KEY_ID",
+  "AWS_SECRET_ACCESS_KEY",
+  "AWS_SESSION_TOKEN",
+  "AWS_PROFILE",
+  "AWS_WEB_IDENTITY_TOKEN_FILE",
+  "AWS_CONTAINER_CREDENTIALS_RELATIVE_URI",
+  "AWS_CONTAINER_CREDENTIALS_FULL_URI"
+] as const;
+
+async function withoutAwsCredentialEnv<T>(callback: () => T | Promise<T>) {
+  const previous = new Map<string, string | undefined>();
+
+  for (const key of awsCredentialEnvKeys) {
+    previous.set(key, process.env[key]);
+    delete process.env[key];
+  }
+
+  try {
+    return await callback();
+  } finally {
+    for (const [key, value] of previous) {
+      if (value === undefined) {
+        delete process.env[key];
+      } else {
+        process.env[key] = value;
+      }
+    }
+  }
+}
 
 describe("proposal drafting", () => {
   it("builds a sectioned proposal from reviewed intake fields", () => {
@@ -78,5 +110,13 @@ describe("proposal drafting", () => {
     const html = renderProposalHtml(proposal);
     expect(html).toContain("&lt;script&gt;");
     expect(html).not.toContain("<script>alert(1)</script>");
+  });
+
+  it("uses demo OCR text when AWS Textract credentials are absent", async () => {
+    const result = await withoutAwsCredentialEnv(() => extractTextFromImage(Buffer.from("not an image")));
+
+    expect(result.provider).toBe("demo");
+    expect(result.text).toContain(sampleIntake.customerName);
+    expect(result.warnings[0]).toContain("AWS Textract credentials");
   });
 });

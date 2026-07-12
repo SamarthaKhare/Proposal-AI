@@ -6,7 +6,7 @@
 - `src/components` contains the capture/review/proposal/email work surface.
 - `src/lib/forms` defines the reviewed intake schema used after OCR.
 - `src/lib/proposal` owns proposal generation, patch validation, patch application, and HTML rendering.
-- `src/lib/server` isolates OpenAI, Google Vision OCR, Gotenberg PDF rendering, Postmark email, and the local demo store.
+- `src/lib/server` isolates OpenAI, AWS Textract OCR, Gotenberg PDF rendering, Resend email, and the local demo store.
 - `prisma/schema.prisma` defines the production data model.
 
 ## AI Editing Contract
@@ -25,7 +25,7 @@ Locked sections, especially `terms`, cannot be rewritten by AI. Delivery, pricin
 
 ## MVP External Services
 
-- OCR: Google Vision OCR REST API, with demo fallback when credentials are absent.
+- OCR: Amazon Textract `DetectDocumentText`, with demo fallback when credentials are absent.
 - AI: OpenAI Responses API, with structured JSON outputs and demo fallback when `OPENAI_API_KEY` is absent.
 - PDF: Gotenberg HTML-to-PDF, with HTML fallback when the service is unavailable.
-- Email: Postmark, with demo response when credentials are absent.
+- Email: Resend, with demo response when credentials are absent.
